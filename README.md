@@ -1,92 +1,90 @@
-# Gestionale Disinfestazione
+# Pest Control Management System
 
-Software gestionale per ditta di disinfestazione/derattizzazione.
-Stack **vincolante**: PHP puro + MySQL, frontend HTML/CSS/JS + jQuery (AJAX), PDF con mPDF, scansione QR con `html5-qrcode`.
+Management software for a pest control and rodent control company.
+Required stack: plain PHP + MySQL, an HTML/CSS/JavaScript + jQuery (AJAX) frontend, mPDF for PDF generation, and `html5-qrcode` for QR scanning.
 
-## Requisiti
-- XAMPP (Apache + MySQL + PHP 8) — il progetto vive in `C:\XAMPP\htdocs\insetto`
-- Estensione PHP **gd** abilitata (richiesta da mPDF) → in `C:\XAMPP\php\php.ini` la riga `extension=gd` deve essere **non** commentata
-- mPDF installato in `/vendor` (via Composer)
+## Requirements
+- XAMPP (Apache + MySQL + PHP 8). The project is located at `C:\XAMPP\htdocs\insetto`.
+- Enable the PHP **gd** extension (required by mPDF). In `C:\XAMPP\php\php.ini`, make sure the `extension=gd` line is not commented out.
+- Install mPDF in `/vendor` using Composer.
 
 ## Setup
 ```bash
-# 1. Crea database e tabelle (base)
+# 1. Create the database and base tables
 C:\XAMPP\mysql\bin\mysql.exe -u root < schema.sql
 
-# 1b. Estensioni: Inventario, HACCP, Fatturazione SDI, ruolo supervisore
+# 1b. Add inventory, HACCP, SDI invoicing, and the supervisor role
 C:\XAMPP\mysql\bin\mysql.exe -u root < schema_v2.sql
 
-# 2. Dipendenze PHP (mPDF)
+# 2. Install PHP dependencies (mPDF)
 composer install
 
-# 3. Popola utenti e configurazione di base
+# 3. Create initial users and configuration data
 C:\XAMPP\php\php.exe seed.php
 ```
-Poi apri: **http://localhost/insetto/** → redirige al login.
+Then open **http://localhost/insetto/**. It redirects to the login page.
 
-## Credenziali di default (create da `seed.php`)
-| Ruolo       | Email                        | Password    |
-|-------------|------------------------------|-------------|
-| admin       | admin@deltasoftware.it       | admin123    |
-| supervisore | super@deltasoftware.it       | super123    |
-| tecnico     | tecnico@deltasoftware.it     | tecnico123  |
+## Default Credentials (created by `seed.php`)
+| Role       | Email                   | Password  |
+|------------|-------------------------|-----------|
+| admin      | admin@deltasoftware.it  | admin123  |
+| supervisor | super@deltasoftware.it  | super123  |
+| technician | tecnico@deltasoftware.it| tecnico123|
 
-I 4 ruoli (RBAC in `src/rbac.php`):
-- **admin**: tutto, inclusa la gestione utenti.
-- **supervisore**: gestione operativa completa (clienti, locali, interventi, magazzino, HACCP, fatturazione, dashboard) **tranne** la gestione utenti.
-- **tecnico**: app in campo + registrazione consumi di magazzino sui propri interventi.
-- **cliente**: sola lettura dei propri dati.
+The four roles are defined in `src/rbac.php`:
+- **admin**: full access, including user management.
+- **supervisor**: full operational access (clients, locations, interventions, inventory, HACCP, invoicing, and dashboard), except user management.
+- **technician**: field app access and inventory usage logging for their own interventions.
+- **client**: read-only access to their own data.
 
-> Cambiare le password dopo il primo accesso. Gli account **cliente** si creano
-> dal gestionale (sezione *Utenti*) associandoli a un cliente.
+> Change the default passwords after the first login. Create **client** accounts
+> in the management system under *Users* and associate them with a client.
 
-## Struttura
+## Project Structure
 ```
-/public            punto d'ingresso web (login, gestionale admin, portale cliente)
-/public/api        endpoint AJAX (JSON)
-/public/assets     css, js (core + viste)
-/frontend          app in campo per i tecnici (mobile, scansione QR)
-/src               logica PHP (db, auth, helpers, soglie, report)
-/vendor            mPDF (Composer)
-/storage           upload foto + report PDF (non accessibili via web)
-config.php         credenziali DB e costanti azienda (fuori dal versioning)
-schema.sql         struttura database
-seed.php           dati iniziali
+/public            web entry point (login, admin system, client portal)
+/public/api        AJAX endpoints (JSON)
+/public/assets     CSS and JavaScript (core and views)
+/frontend          mobile field app for technicians, including QR scanning
+/src               PHP logic (database, authentication, helpers, thresholds, reports)
+/vendor            Composer dependencies, including mPDF
+/storage           photo uploads and PDF reports (not web-accessible)
+config.php         database credentials and company settings (not version controlled)
+schema.sql         database schema
+seed.php           initial data
 ```
 
-## Ruoli e instradamento (login unico)
-Lo stesso login smista in base al ruolo:
-- **admin** → `/public/index.php` (gestionale completo)
-- **tecnico** → `/frontend/` (app in campo)
-- **cliente** → `/public/portale.php` (sola lettura)
+## Roles and Routing (Single Login)
+The login page redirects users based on their role:
+- **admin** → `/public/index.php` (full management system)
+- **technician** → `/frontend/` (field app)
+- **client** → `/public/portale.php` (read-only portal)
 
-## Moduli implementati
-1. Schema DB + connessione PDO
-2. Auth, ruoli e CSRF (sessioni PHP)
-3. Anagrafica clienti (card + AJAX)
-4. Locali → aree → postazioni numerate con QR
-5. Scansione QR in campo (`html5-qrcode`)
-6. Pianificazione interventi + app tecnico (rilevazioni, manutenzione, evidenze, validazione)
-7. Configurazione tipi dispositivo + calcolo automatico soglie
-8. Report PDF (mPDF) con layout dedicato + invio email
-9. Portale cliente (sola lettura: storico interventi, report, postazioni)
+## Implemented Modules
+1. Database schema and PDO connection
+2. Authentication, roles, and CSRF protection (PHP sessions)
+3. Client records (cards + AJAX)
+4. Locations → areas → numbered stations with QR codes
+5. Field QR scanning (`html5-qrcode`)
+6. Intervention scheduling and technician app (readings, maintenance, evidence, validation)
+7. Device type configuration and automatic threshold calculation
+8. PDF reports (mPDF) with a custom layout and email delivery
+9. Read-only client portal (intervention history, reports, and stations)
 
-## Estensioni v2 (oltre l'MVP)
-- **Inventario/Magazzino**: articoli, lotti, scadenze, soglia di riordino, alert; consumo prodotti per intervento (scarico FEFO). API `magazzino.php`, viste *Magazzino*.
-- **HACCP/IPM**: registro automatico dei superamenti soglia (popolato alla validazione dell'intervento). API `haccp.php`, vista *HACCP*.
-- **Fatturazione SDI**: preventivi e fatture con righe, calcolo imponibile/IVA/totale, generazione **XML FatturaPA** (sottoinsieme dei campi, *non firmato/trasmesso*). API `documenti.php`, vista *Fatture*.
-- **Dashboard KPI**: interventi per tecnico/area, postazioni oltre soglia, trend infestazioni. API `dashboard.php`, vista *Dashboard*.
-- **RBAC** a 4 ruoli centralizzato in `src/rbac.php` (`require_can('area.azione')`).
+## V2 Extensions (Beyond the MVP)
+- **Inventory/Warehouse**: products, batches, expiration dates, reorder thresholds, alerts, and product usage per intervention (FEFO stock deduction). API: `magazzino.php`; view: *Inventory*.
+- **HACCP/IPM**: automatic log of threshold exceedances, populated when an intervention is validated. API: `haccp.php`; view: *HACCP*.
+- **SDI Invoicing**: quotes and invoices with line items, taxable amount/VAT/total calculations, and **FatturaPA XML** generation (partial field coverage; *not signed or transmitted*). API: `documenti.php`; view: *Invoices*.
+- **KPI Dashboard**: interventions by technician/area, stations over threshold, and infestation trends. API: `dashboard.php`; view: *Dashboard*.
+- **Four-role RBAC** centralized in `src/rbac.php` (`require_can('area.action')`).
 
-## Sicurezza
-- PDO con prepared statement ovunque
-- Password con `password_hash()` / `password_verify()`
-- Controllo del ruolo su ogni endpoint; il cliente vede solo i propri dati
-- Token CSRF (`X-CSRF-Token`) su tutte le chiamate che modificano dati
-- `.htaccess` nega l'accesso diretto a `config.php`, `schema.sql`, `/src`, `/storage`, `/vendor`
+## Security
+- PDO prepared statements for database queries
+- Passwords handled with `password_hash()` / `password_verify()`
+- Role checks on every endpoint; clients can only access their own data
+- CSRF tokens (`X-CSRF-Token`) on all data-changing requests
+- `.htaccess` blocks direct access to `config.php`, `schema.sql`, `/src`, `/storage`, and `/vendor`
 
-## Note
-- L'invio email del report usa `mail()`: in locale (XAMPP senza SMTP) non parte,
-  ma il PDF viene comunque generato e salvato. In produzione configurare un SMTP.
-- I file di riferimento `docs/report_esempio.pdf` e le immagini UI non erano forniti:
-  il layout del report replica la struttura descritta nella specifica.
+## Notes
+- Report emails use `mail()`. In a local XAMPP setup without SMTP, email delivery will not work, but the PDF is still generated and saved. Configure SMTP for production.
+- The reference files `docs/report_esempio.pdf` and the UI images were not provided, so the report layout follows the structure described in the specification.
