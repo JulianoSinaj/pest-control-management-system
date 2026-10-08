@@ -1,0 +1,17 @@
+# Protezione file sensibili alla radice del progetto (Apache 2.4).
+# Il punto d'ingresso web e' la cartella /public.
+
+# Nega l'accesso diretto a file di configurazione/codice/dump.
+<FilesMatch "\.(md|sql|phar|lock|json|dist|ini)$">
+  Require all denied
+</FilesMatch>
+
+<Files "config.php">
+  Require all denied
+</Files>
+<Files "seed.php">
+  Require all denied
+</Files>
+
+# Redirige la radice del progetto verso l'app.
+DirectoryIndex index.php

@@ -1,0 +1,5 @@
+/config.php
+/vendor/
+/composer.phar
+/storage/*
+!/storage/.htaccess
